@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>五子棋挑战赛</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Helvetica, arial, nimbussansl, liberationsans, freesans, clean, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";;
+        }
+        #container {
+            position: relative;
+            margin: 50px;
+        }
+        .background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: 1px solid black;
+            z-index: 1;
+        }
+        .chessboard {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            border: 1px solid transparent;
+            z-index: 2;
+            cursor: pointer;
+        }
+        .background > div, .chessboard > div {
+            display: -webkit-flex;
+            display: flex;
+        }
+        .background > div {
+            border-bottom: 1px solid black;
+        }
+        .background > div:last-of-type {
+            border-bottom: 0;
+        }
+        .background > div > span {
+            -webkit-flex: 1;
+            flex: 1;
+            height: 30px;
+            border-right: 1px solid black;
+        }
+        .chessboard > div > span {
+            -webkit-flex: 1;
+            flex: 1;
+            height: 31px;
+        }
+        .background > div > span:last-of-type {
+            border-right: 0;
+        }
+        .chessboard i.black {
+            display: block;
+            background-color: #000000;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            margin: 1px 0 0 1px;
+        }
+        .chessboard i.white {
+            display: block;
+            background-color: #ffffff;
+            border-radius: 50%;
+            border: 1px solid #000000;
+            width: 26px;
+            height: 26px;
+            margin: 1px 0 0 1px;
+        }
+        #player-form {
+            margin-left: 500px;
+        }
+        .player-name {
+            width: 80px;
+        }
+        .player-api {
+            width: 200px;
+        }
+        .start {
+            margin-top: 20px;
+        }
+    </style>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+</head>
+<body>
+    <div id="container">
+    </div>
+    <div id="player-form">
+        <div>
+            <h2>挑战方A</h2>
+            <label>姓名：<input type="text" name="player-name-a" class="player-name" value="邵帅"></label>
+            <label>接口地址：<input type="text" name="player-api-a" class="player-api" value="http://localhost/five/demo.php"></label>
+        </div>
+        <div>
+            <h2>挑战方B</h2>
+            <label>姓名：<input type="text" name="player-name-b" class="player-name" value="李云飞"></label>
+            <label>接口地址：<input type="text" name="player-api-b" class="player-api" value="http://localhost/five/demo.php"></label>
+        </div>
+        <button id="start" class="start">开始比赛</button>
+    </div>
+    <script>
+        var EMPTY = 0;
+        var BLACK = 1;
+        var WHITE = 2;
+        var size = 15; // 标准五子棋15路
+        var blockSize = 30;
+
+        var background = '<div class="background">';
+        for (var i = 0; i < size - 1; i++) { // 线比格子多1，所以减掉
+            background += '<div>';
+            for (var j = 0; j < size - 1; j++) {
+                background += '<span></span>';
+            }
+            background += '</div>';
+        }
+        background += '</div>';
+
+        var chessboard = '<div class="chessboard">';
+        for (i = 0; i < size; i++) {
+            chessboard += '<div>';
+            for (j = 0; j < size; j++) {
+                chessboard += '<span data-y="' + i + '" data-x="' + j + '"></span>';
+            }
+            chessboard += '</div>';
+        }
+        chessboard += '</div>';
+
+        var container = $('#container');
+        container.html(background).find('.background').width((size - 1) * blockSize + (size - 1) - 1);
+        container.append(chessboard);
+        var chessboardEl = container.find('.chessboard');
+        chessboardEl.width(size * blockSize + size);
+        $('.chessboard').delegate('span', 'click', function () {
+            console.log($(this).data('x'), $(this).data('y'));
+            $(this).html('<i class="white"></i>');
+        });
+
+        // -----------------比赛--------------------
+        $('#start').click(function (e) {
+            e.preventDefault();
+            $(this).attr('disabled', 'disabled');
+            // generate session id
+            var sessionId = 'game' + new Date().getTime();
+            console.log('比赛', sessionId, '开始');
+
+            var aName = $('[name=player-name-a]').val();
+            var aApi = $('[name=player-api-a]').val();
+            var bName = $('[name=player-name-b]').val();
+            var bApi = $('[name=player-api-b]').val();
+
+            // 随机颜色
+            var turn;
+            if (Math.random() > 0.5) { // a黑 b白
+                turn = [
+                    { name: aName, api: aApi, color: 'black' },
+                    { name: bName, api: bApi, color: 'white' }
+                ];
+            } else {
+                turn = [
+                    { name: bName, api: bApi, color: 'black' },
+                    { name: aName, api: aApi, color: 'white' }
+                ];
+            }
+
+            // ----------------开始调用-----------------
+            var step = 0;
+            var recursion = function (go) {
+                if (step > 10) {
+                    console.log(matrix);
+                    return;
+                }
+                $.ajax({
+                    url: turn[step % 2].api,
+                    data: {
+                        step: go,
+                        session: sessionId,
+                        color: turn[step % 2].color
+                    },
+                    dataType: 'jsonp',
+                    jsonpCallback: 'go',
+                    success: successCallback
+                });
+            };
+            var successCallback = function (response) {
+                if (response[0] === -1 && response[1] === -1) {
+                    alert('比赛结束');
+                    return;
+                }
+                chessboardEl.find('[data-x=' + response[0] + '][data-y=' + response[1] + ']').html('<i class="' + turn[step % 2].color + '"></i>');
+                put(response, turn[step % 2].color);
+                console.log('step', step, turn[step % 2].name, turn[step % 2].color, 'go', response);
+                step++;
+                recursion('' + response[0] + ',' + response[1]);
+            };
+            $.ajax({
+                url: turn[step % 2].api,
+                data: {
+                    step: 'start',
+                    session: sessionId,
+                    color: turn[step % 2].color
+                },
+                dataType: 'jsonp',
+                jsonpCallback: 'go',
+                success: successCallback
+            });
+            // ----------------开始调用-----------------
+
+            // --------------禁手检测----------------
+            var fours = 0;
+            var threes = 0;
+            var matrix = []; // 弄个数组纪录状态
+            for (i = 0; i < size; i++) {
+                var temp = [];
+                for (j = 0; j < size; j++) {
+                    temp.push(0);
+                }
+                matrix.push(temp);
+            }
+            var put = function (coordinate, color) {
+                matrix[coordinate[1]][coordinate[0]] = (color === 'black' ? BLACK : WHITE);
+            };
+            var checkValid = function (x, y) {
+                var three = /01110/;
+                var four = /01111/;
+                var threeCount = 0;
+                var fourCount = 0;
+                var m = matrix;
+                var valid = true;
+                // top
+                var t = function () {
+                    return (y > 2 && y < 14) ? ('' + m[y + 1][x] + m[y][x] + m[y - 1][x] + m[y - 2][x] + m[y - 3][x]) : '';
+                };
+                var tl = function () {
+                    return ((y > 2 && y < 14) && (x > 1 && x < 12)) ? ('' + m[y + 1][x - 1] + m[y][x] + m[y - 1][x + 1] + m[y - 2][x + 2] + m[y - 3][x + 3]) : '';
+                };
+                var l = function () {
+                    return (x > 1 && x < 12) ? ('' + m[y][x - 1] + m[y][x] + m[y][x + 1] + m[y][x + 2] + m[y][x + 3]) : '';
+                };
+                var bl = function () {
+                    return ((y > 1 && y < 12) && (x > 1 && x < 12)) ? ('' + m[y - 1][x - 1] + m[y][x] + m[y + 1][x + 1] + m[y + 2][x + 2] + m[y + 3][x + 3]) : '';
+                };
+                var b = function () {
+                    return (y > 1 && y < 12) ? ('' + m[y - 1][x] + m[y][x] + m[y + 1][x] + m[y + 2][x] + m[y + 3][x]) : '';
+                };
+                var br = function () {
+                    return ((y > 1 && y < 12) && (x > 1 && x < 12)) ? ('' + m[y - 1][x + 1] + m[y][x] + m[y + 1][x - 1] + m[y + 2][x - 2] + m[y + 3][x - 3]) : '';
+                };
+                var r = function () {
+                    return (x > 2 && x < 14) ? ('' + m[y][x + 1] + m[y][x] + m[y][x - 1] + m[y][x - 2] + m[y][x - 3]) : '';
+                };
+                var tr = function () {
+                    return ((y > 2 && y < 14) && (x > 2 && x < 14)) ? ('' + m[y + 1][x + 1] + m[y][x] + m[y - 1][x - 1] + m[y - 2][x - 2] + m[y - 3][x - 3]) : '';
+                };
+                var todo = [t, tl, l, bl, b, br, r, tr];
+                todo.forEach(function (c) {
+
+                });
+            };
+            // --------------禁手检测----------------
+        });
+    </script>
+</body>
+</html>
