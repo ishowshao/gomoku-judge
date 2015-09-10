@@ -1,0 +1,2 @@
+# renju-judge
+judge
