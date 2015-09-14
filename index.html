@@ -173,7 +173,7 @@
                 $.ajax({
                     url: turn[step % 2].api,
                     data: {
-                        step: go,
+                        move: go,
                         session: sessionId,
                         color: turn[step % 2].color
                     },
@@ -196,7 +196,7 @@
             $.ajax({
                 url: turn[step % 2].api,
                 data: {
-                    step: 'start',
+                    move: 'start',
                     session: sessionId,
                     color: turn[step % 2].color
                 },
