@@ -11,14 +11,14 @@ var Computer = function (option) {
 /**
  * Get my move, param is adversary's move
  *
- * @param {Array} adversary
+ * @param {Array|string} adversary
  */
 Computer.prototype.move = function (adversary) {
     var me = this;
     $.ajax({
         url: this.api,
         data: {
-            move: adversary[0] + '-' + adversary[1],
+            move: adversary === 'start' ? 'start' : adversary[0] + '-' + adversary[1],
             session: this.session,
             color: this.color
         },
@@ -241,7 +241,7 @@ Game.prototype.start = function () {
             session: sessionA,
             api: apiA
         });
-        playerA.move([7, 7]);
+        playerA.move('start');
         playerA.onMoved(function (move) {
             me.chessboard.go(move);
             if (move[0] === -1 || move[1] === -1) {
