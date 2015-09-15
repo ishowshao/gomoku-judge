@@ -8,10 +8,12 @@
             margin: 0;
             font-family: Helvetica, arial, nimbussansl, liberationsans, freesans, clean, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";;
         }
+
         #container {
             position: relative;
             margin: 50px;
         }
+
         .background {
             position: absolute;
             top: 0;
@@ -19,6 +21,7 @@
             border: 1px solid black;
             z-index: 1;
         }
+
         .chessboard {
             position: absolute;
             top: -15px;
@@ -27,30 +30,37 @@
             z-index: 2;
             cursor: pointer;
         }
+
         .background > div, .chessboard > div {
             display: -webkit-flex;
             display: flex;
         }
+
         .background > div {
             border-bottom: 1px solid black;
         }
+
         .background > div:last-of-type {
             border-bottom: 0;
         }
+
         .background > div > span {
             -webkit-flex: 1;
             flex: 1;
             height: 30px;
             border-right: 1px solid black;
         }
+
         .chessboard > div > span {
             -webkit-flex: 1;
             flex: 1;
             height: 31px;
         }
+
         .background > div > span:last-of-type {
             border-right: 0;
         }
+
         .chessboard i.black {
             display: block;
             background-color: #000000;
@@ -58,7 +68,9 @@
             width: 28px;
             height: 28px;
             margin: 1px 0 0 1px;
+            color: #ffffff;
         }
+
         .chessboard i.white {
             display: block;
             background-color: #ffffff;
@@ -68,44 +80,140 @@
             height: 26px;
             margin: 1px 0 0 1px;
         }
+
         #player-form {
             margin-left: 500px;
         }
+
         .player-name {
             width: 80px;
         }
+
         .player-api {
             width: 200px;
         }
+
         .start {
             margin-top: 20px;
         }
     </style>
-    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="jquery.min.js"></script>
 </head>
 <body>
-    <div id="container">
+<div id="container">
+</div>
+<div id="player-form">
+    <div>
+        <h2>挑战方A</h2>
+        <label>姓名：<input type="text" name="player-name-a" class="player-name" value="邵帅"></label>
+        <label>接口地址：<input type="text" name="player-api-a" class="player-api" value="http://127.0.0.1:8124/"></label>
     </div>
-    <div id="player-form">
-        <div>
-            <h2>挑战方A</h2>
-            <label>姓名：<input type="text" name="player-name-a" class="player-name" value="邵帅"></label>
-            <label>接口地址：<input type="text" name="player-api-a" class="player-api" value="http://localhost/five/demo.php"></label>
-        </div>
-        <div>
-            <h2>挑战方B</h2>
-            <label>姓名：<input type="text" name="player-name-b" class="player-name" value="李云飞"></label>
-            <label>接口地址：<input type="text" name="player-api-b" class="player-api" value="http://localhost/five/demo.php"></label>
-        </div>
-        <button id="start" class="start">开始比赛</button>
+    <div>
+        <h2>挑战方B</h2>
+        <label>姓名：<input type="text" name="player-name-b" class="player-name" value="李云飞"></label>
+        <label>接口地址：<input type="text" name="player-api-b" class="player-api" value="http://127.0.0.1:8124/"></label>
+        <label>人工<input id="person" type="checkbox"></label>
     </div>
-    <script>
-        var EMPTY = 0;
-        var BLACK = 1;
-        var WHITE = 2;
-        var size = 15; // 标准五子棋15路
-        var blockSize = 30;
+    <button id="start" class="start">开始比赛</button>
+</div>
+<script>
+    /**
+     * @class Game
+     * @constructor
+     */
+    var Game = function () {
+    };
+    Game.prototype.initEvent = function () {
+        $('#person').on('click', function () {
+            if ($(this).prop('checked')) {
+                $('[name=player-api-b]').attr('disabled', 'disabled');
+            } else {
+                $('[name=player-api-b]').removeAttr('disabled');
+            }
+        });
 
+        // -----------------比赛--------------------
+        $('#start').click(function (e) {
+            e.preventDefault();
+            $(this).attr('disabled', 'disabled');
+            // generate session id
+            var sessionId = 'a' + new Date().getTime();
+            var sessionId2 = 'b' + new Date().getTime();
+            console.log('比赛', sessionId, '开始');
+
+            var aName = $('[name=player-name-a]').val();
+            var aApi = $('[name=player-api-a]').val();
+            var bName = $('[name=player-name-b]').val();
+            var bApi = $('[name=player-api-b]').val();
+
+            // 随机颜色
+            var turn;
+            if (Math.random() > 0.5) { // a黑 b白
+                turn = [
+                    {name: aName, api: aApi, color: 'black', session: sessionId},
+                    {name: bName, api: bApi, color: 'white', session: sessionId2}
+                ];
+            } else {
+                turn = [
+                    {name: bName, api: bApi, color: 'black', session: sessionId},
+                    {name: aName, api: aApi, color: 'white', session: sessionId2}
+                ];
+            }
+
+            // ----------------开始调用-----------------
+            var step = 0;
+            var recursion = function (go) {
+                if (step > 30) {
+                    return;
+                }
+                $.ajax({
+                    url: turn[step % 2].api,
+                    data: {
+                        move: go,
+                        session: turn[step % 2].session,
+                        color: turn[step % 2].color
+                    },
+                    dataType: 'jsonp',
+                    jsonpCallback: 'go',
+                    success: successCallback
+                });
+            };
+            var successCallback = function (response) {
+                if (response[0] === -1 && response[1] === -1) {
+                    alert('比赛结束');
+                    return;
+                }
+                chessboardEl.find('[data-x=' + response[0] + '][data-y=' + response[1] + ']').html('<i class="' + turn[step % 2].color + '">' + step + '</i>');
+                console.log('step', step, turn[step % 2].name, turn[step % 2].color, 'go', response);
+                step++;
+                recursion('' + response[0] + ',' + response[1]);
+            };
+            $.ajax({
+                url: turn[step % 2].api,
+                data: {
+                    move: 'start',
+                    session: turn[step % 2].session,
+                    color: turn[step % 2].color
+                },
+                dataType: 'jsonp',
+                jsonpCallback: 'go',
+                success: successCallback
+            });
+
+        });
+
+    };
+
+    var Chessboard = function () {
+
+    };
+
+    Chessboard.SIZE = 15; // 标准五子棋15路
+    Chessboard.BLOCK_SIZE = 30; // 棋盘格子的大小，单位是像素
+
+    Chessboard.prototype.render = function () {
+        var size = Chessboard.SIZE;
+        var blockSize = Chessboard.BLOCK_SIZE;
         var background = '<div class="background">';
         for (var i = 0; i < size - 1; i++) { // 线比格子多1，所以减掉
             background += '<div>';
@@ -131,134 +239,74 @@
         container.append(chessboard);
         var chessboardEl = container.find('.chessboard');
         chessboardEl.width(size * blockSize + size);
+    };
+
+    Chessboard.prototype.initEvent = function () {
         $('.chessboard').delegate('span', 'click', function () {
             console.log($(this).data('x'), $(this).data('y'));
             $(this).html('<i class="white"></i>');
         });
+    };
 
-        // -----------------比赛--------------------
-        $('#start').click(function (e) {
-            e.preventDefault();
-            $(this).attr('disabled', 'disabled');
-            // generate session id
-            var sessionId = 'game' + new Date().getTime();
-            console.log('比赛', sessionId, '开始');
+    var Computer = function (option) {
+        this.color = option.color;
+        this.session = option.session;
+        this.api = option.api;
+    };
 
-            var aName = $('[name=player-name-a]').val();
-            var aApi = $('[name=player-api-a]').val();
-            var bName = $('[name=player-name-b]').val();
-            var bApi = $('[name=player-api-b]').val();
-
-            // 随机颜色
-            var turn;
-            if (Math.random() > 0.5) { // a黑 b白
-                turn = [
-                    { name: aName, api: aApi, color: 'black' },
-                    { name: bName, api: bApi, color: 'white' }
-                ];
-            } else {
-                turn = [
-                    { name: bName, api: bApi, color: 'black' },
-                    { name: aName, api: aApi, color: 'white' }
-                ];
+    /**
+     * Get my move, param is adversary's move
+     *
+     * @param {Array} adversary
+     */
+    Computer.prototype.move = function (adversary) {
+        var me = this;
+        $.ajax({
+            url: this.api,
+            data: {
+                move: adversary[0] + '-' + adversary[1],
+                session: this.session,
+                color: this.color
+            },
+            dataType: 'jsonp',
+            jsonpCallback: 'go',
+            success: function (move) {
+                me.callback.call(null, move);
             }
-
-            // ----------------开始调用-----------------
-            var step = 0;
-            var recursion = function (go) {
-                if (step > 10) {
-                    console.log(matrix);
-                    return;
-                }
-                $.ajax({
-                    url: turn[step % 2].api,
-                    data: {
-                        move: go,
-                        session: sessionId,
-                        color: turn[step % 2].color
-                    },
-                    dataType: 'jsonp',
-                    jsonpCallback: 'go',
-                    success: successCallback
-                });
-            };
-            var successCallback = function (response) {
-                if (response[0] === -1 && response[1] === -1) {
-                    alert('比赛结束');
-                    return;
-                }
-                chessboardEl.find('[data-x=' + response[0] + '][data-y=' + response[1] + ']').html('<i class="' + turn[step % 2].color + '"></i>');
-                put(response, turn[step % 2].color);
-                console.log('step', step, turn[step % 2].name, turn[step % 2].color, 'go', response);
-                step++;
-                recursion('' + response[0] + ',' + response[1]);
-            };
-            $.ajax({
-                url: turn[step % 2].api,
-                data: {
-                    move: 'start',
-                    session: sessionId,
-                    color: turn[step % 2].color
-                },
-                dataType: 'jsonp',
-                jsonpCallback: 'go',
-                success: successCallback
-            });
-            // ----------------开始调用-----------------
-
-            // --------------禁手检测----------------
-            var fours = 0;
-            var threes = 0;
-            var matrix = []; // 弄个数组纪录状态
-            for (i = 0; i < size; i++) {
-                var temp = [];
-                for (j = 0; j < size; j++) {
-                    temp.push(0);
-                }
-                matrix.push(temp);
-            }
-            var put = function (coordinate, color) {
-                matrix[coordinate[1]][coordinate[0]] = (color === 'black' ? BLACK : WHITE);
-            };
-            var checkValid = function (x, y) {
-                var three = /01110/;
-                var four = /01111/;
-                var threeCount = 0;
-                var fourCount = 0;
-                var m = matrix;
-                var valid = true;
-                // top
-                var t = function () {
-                    return (y > 2 && y < 14) ? ('' + m[y + 1][x] + m[y][x] + m[y - 1][x] + m[y - 2][x] + m[y - 3][x]) : '';
-                };
-                var tl = function () {
-                    return ((y > 2 && y < 14) && (x > 1 && x < 12)) ? ('' + m[y + 1][x - 1] + m[y][x] + m[y - 1][x + 1] + m[y - 2][x + 2] + m[y - 3][x + 3]) : '';
-                };
-                var l = function () {
-                    return (x > 1 && x < 12) ? ('' + m[y][x - 1] + m[y][x] + m[y][x + 1] + m[y][x + 2] + m[y][x + 3]) : '';
-                };
-                var bl = function () {
-                    return ((y > 1 && y < 12) && (x > 1 && x < 12)) ? ('' + m[y - 1][x - 1] + m[y][x] + m[y + 1][x + 1] + m[y + 2][x + 2] + m[y + 3][x + 3]) : '';
-                };
-                var b = function () {
-                    return (y > 1 && y < 12) ? ('' + m[y - 1][x] + m[y][x] + m[y + 1][x] + m[y + 2][x] + m[y + 3][x]) : '';
-                };
-                var br = function () {
-                    return ((y > 1 && y < 12) && (x > 1 && x < 12)) ? ('' + m[y - 1][x + 1] + m[y][x] + m[y + 1][x - 1] + m[y + 2][x - 2] + m[y + 3][x - 3]) : '';
-                };
-                var r = function () {
-                    return (x > 2 && x < 14) ? ('' + m[y][x + 1] + m[y][x] + m[y][x - 1] + m[y][x - 2] + m[y][x - 3]) : '';
-                };
-                var tr = function () {
-                    return ((y > 2 && y < 14) && (x > 2 && x < 14)) ? ('' + m[y + 1][x + 1] + m[y][x] + m[y - 1][x - 1] + m[y - 2][x - 2] + m[y - 3][x - 3]) : '';
-                };
-                var todo = [t, tl, l, bl, b, br, r, tr];
-                todo.forEach(function (c) {
-
-                });
-            };
-            // --------------禁手检测----------------
         });
-    </script>
+    };
+
+    /**
+     * Do callback when this player moved
+     *
+     * @param {Function} callback
+     */
+    Computer.prototype.onMoved = function (callback) {
+        this.callback = callback;
+    };
+
+    // main
+    var chessboard = new Chessboard();
+    chessboard.render();
+
+    var playerA = new Computer();
+    playerA.move([7, 7]);
+    playerA.onMoved(function (move) {
+        if (move[0] === -1 || move[1] === -1) {
+            console.log('Game over: Player A failed.');
+        } else {
+            playerB.move(move);
+        }
+    });
+
+    var playerB = new Computer();
+    playerB.onMoved(function (move) {
+        if (move[0] === -1 || move[1] === -1) {
+            console.log('Game over: Player B failed.');
+        } else {
+            playerA.move(move);
+        }
+    });
+</script>
 </body>
 </html>
