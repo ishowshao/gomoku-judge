@@ -159,6 +159,13 @@ var Game = function () {
      * @type {number}
      */
     this.mode = 1;
+
+    /**
+     * 如果人机对战，人默认是黑棋，界面上也是默认选中黑棋
+     *
+     * @type {string}
+     */
+    this.person = 'black';
 };
 
 /**
@@ -188,6 +195,9 @@ Game.prototype.initEvent = function () {
         }
         $('#mode' + me.mode).show();
     });
+    $('[name=person-color]').on('click', function () {
+        me.person = $(this).val();
+    });
 
     $('#start').click(function () {
         me.start();
@@ -211,8 +221,6 @@ Game.prototype.init = function () {
 Game.prototype.start = function () {
     var me = this;
 
-    $(this).prop('disabled', true);
-
     // 为避免自己的AI相互对战产生问题，生成两个session id
     var sessionA = Game.id();
     var sessionB = Game.id();
@@ -222,41 +230,68 @@ Game.prototype.start = function () {
     var apiA = $('[name=player-api-a]').val();
     var nameB = $('[name=player-name-b]').val();
     var apiB = $('[name=player-api-b]').val();
+    var namePerson = $('[name=person-name]').val();
+    var nameAi = $('[name=ai-name]').val();
+    var apiAi = $('[name=ai-api]').val();
 
-    // 随机颜色
-    var turn;
-    if (Math.random() > 0.5) { // a黑 b白
-        turn = [
-            {name: nameA, api: apiA, color: 'black', session: sessionA},
-            {name: nameB, api: apiB, color: 'white', session: sessionB}
-        ];
+    if (this.mode === 1) {
+        var playerA = new Computer({
+            name: nameA,
+            color: 'black',
+            session: sessionA,
+            api: apiA
+        });
+        playerA.move([7, 7]);
+        playerA.onMoved(function (move) {
+            me.chessboard.go(move);
+            if (move[0] === -1 || move[1] === -1) {
+                console.log('Game over: Player A failed.');
+            } else {
+                playerB.move(move);
+            }
+        });
+
+        var playerB = new Computer({
+            name: nameB,
+            color: 'white',
+            session: sessionB,
+            api: apiB
+        });
+        playerB.onMoved(function (move) {
+            if (move[0] === -1 || move[1] === -1) {
+                console.log('Game over: Player B failed.');
+            } else {
+                playerA.move(move);
+            }
+        });
     } else {
-        turn = [
-            {name: nameB, api: apiB, color: 'black', session: sessionA},
-            {name: nameA, api: apiA, color: 'white', session: sessionB}
-        ];
+        var person = new Person({
+            name: namePerson,
+            color: me.person
+        });
+        person.onMoved(function (move) {
+            me.chessboard.go(move);
+            if (move[0] === -1 || move[1] === -1) {
+                console.log('Game over: Person failed.');
+            } else {
+                playerB.move(move);
+            }
+        });
+        var ai = new Computer({
+            name: nameAi,
+            color: me.person === 'black' ? 'white' : 'black',
+            session: sessionA,
+            api: apiAi
+        });
+        ai.onMoved(function (move) {
+            me.chessboard.go(move);
+            if (move[0] === -1 || move[1] === -1) {
+                console.log('Game over: AI failed.');
+            } else {
+                playerB.move(move);
+            }
+        });
     }
-
-    var playerA = new Computer(turn[0]);
-    playerA.move([7, 7]);
-    playerA.onMoved(function (move) {
-        me.chessboard.go(move);
-        if (move[0] === -1 || move[1] === -1) {
-            console.log('Game over: Player A failed.');
-        } else {
-            playerB.move(move);
-        }
-    });
-
-
-    var playerB = (this.vsPerson ? new Person(turn[1]) : new Computer(turn[1]));
-    playerB.onMoved(function (move) {
-        if (move[0] === -1 || move[1] === -1) {
-            console.log('Game over: Player B failed.');
-        } else {
-            playerA.move(move);
-        }
-    });
 };
 
 
