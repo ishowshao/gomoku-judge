@@ -104,209 +104,37 @@
 </div>
 <div id="player-form">
     <div>
-        <h2>挑战方A</h2>
-        <label>姓名：<input type="text" name="player-name-a" class="player-name" value="邵帅"></label>
-        <label>接口地址：<input type="text" name="player-api-a" class="player-api" value="http://127.0.0.1:8124/"></label>
+        <h2>选择模式</h2>
+        <label><input type="radio" name="mode" value="1" checked>AI vs AI</label>
+        <label><input type="radio" name="mode" value="2">人 vs AI</label>
     </div>
-    <div>
-        <h2>挑战方B</h2>
-        <label>姓名：<input type="text" name="player-name-b" class="player-name" value="李云飞"></label>
-        <label>接口地址：<input type="text" name="player-api-b" class="player-api" value="http://127.0.0.1:8124/"></label>
-        <label>人工<input id="person" type="checkbox"></label>
+    <div id="mode1">
+        <div id="black">
+            <h2>AI - BLACK</h2>
+            <label>姓名：<input type="text" name="player-name-a" class="player-name" value="邵帅"></label>
+            <label>接口地址：<input type="text" name="player-api-a" class="player-api" value="http://127.0.0.1:8124/"></label>
+        </div>
+        <div id="white">
+            <h2>AI - WHITE</h2>
+            <label>姓名：<input type="text" name="player-name-b" class="player-name" value="李云飞"></label>
+            <label>接口地址：<input type="text" name="player-api-b" class="player-api" value="http://127.0.0.1:8124/"></label>
+        </div>
+    </div>
+    <div id="mode2" style="display: none;">
+        <div>
+            <h2>人</h2>
+            <label>姓名：<input type="text" name="person-name" class="player-name" value="邵帅"></label>
+            <label><input type="radio" name="person-color" checked>执黑</label>
+            <label><input type="radio" name="person-color">执白</label>
+        </div>
+        <div>
+            <h2>AI</h2>
+            <label>姓名：<input type="text" name="ai-name" class="player-name" value="AI"></label>
+            <label>接口地址：<input type="text" name="ai-api" class="player-api" value="http://127.0.0.1:8124/"></label>
+        </div>
     </div>
     <button id="start" class="start">开始比赛</button>
 </div>
-<script>
-    /**
-     * @class Game
-     * @constructor
-     */
-    var Game = function () {
-    };
-    Game.prototype.initEvent = function () {
-        $('#person').on('click', function () {
-            if ($(this).prop('checked')) {
-                $('[name=player-api-b]').attr('disabled', 'disabled');
-            } else {
-                $('[name=player-api-b]').removeAttr('disabled');
-            }
-        });
-
-        // -----------------比赛--------------------
-        $('#start').click(function (e) {
-            e.preventDefault();
-            $(this).attr('disabled', 'disabled');
-            // generate session id
-            var sessionId = 'a' + new Date().getTime();
-            var sessionId2 = 'b' + new Date().getTime();
-            console.log('比赛', sessionId, '开始');
-
-            var aName = $('[name=player-name-a]').val();
-            var aApi = $('[name=player-api-a]').val();
-            var bName = $('[name=player-name-b]').val();
-            var bApi = $('[name=player-api-b]').val();
-
-            // 随机颜色
-            var turn;
-            if (Math.random() > 0.5) { // a黑 b白
-                turn = [
-                    {name: aName, api: aApi, color: 'black', session: sessionId},
-                    {name: bName, api: bApi, color: 'white', session: sessionId2}
-                ];
-            } else {
-                turn = [
-                    {name: bName, api: bApi, color: 'black', session: sessionId},
-                    {name: aName, api: aApi, color: 'white', session: sessionId2}
-                ];
-            }
-
-            // ----------------开始调用-----------------
-            var step = 0;
-            var recursion = function (go) {
-                if (step > 30) {
-                    return;
-                }
-                $.ajax({
-                    url: turn[step % 2].api,
-                    data: {
-                        move: go,
-                        session: turn[step % 2].session,
-                        color: turn[step % 2].color
-                    },
-                    dataType: 'jsonp',
-                    jsonpCallback: 'go',
-                    success: successCallback
-                });
-            };
-            var successCallback = function (response) {
-                if (response[0] === -1 && response[1] === -1) {
-                    alert('比赛结束');
-                    return;
-                }
-                chessboardEl.find('[data-x=' + response[0] + '][data-y=' + response[1] + ']').html('<i class="' + turn[step % 2].color + '">' + step + '</i>');
-                console.log('step', step, turn[step % 2].name, turn[step % 2].color, 'go', response);
-                step++;
-                recursion('' + response[0] + ',' + response[1]);
-            };
-            $.ajax({
-                url: turn[step % 2].api,
-                data: {
-                    move: 'start',
-                    session: turn[step % 2].session,
-                    color: turn[step % 2].color
-                },
-                dataType: 'jsonp',
-                jsonpCallback: 'go',
-                success: successCallback
-            });
-
-        });
-
-    };
-
-    var Chessboard = function () {
-
-    };
-
-    Chessboard.SIZE = 15; // 标准五子棋15路
-    Chessboard.BLOCK_SIZE = 30; // 棋盘格子的大小，单位是像素
-
-    Chessboard.prototype.render = function () {
-        var size = Chessboard.SIZE;
-        var blockSize = Chessboard.BLOCK_SIZE;
-        var background = '<div class="background">';
-        for (var i = 0; i < size - 1; i++) { // 线比格子多1，所以减掉
-            background += '<div>';
-            for (var j = 0; j < size - 1; j++) {
-                background += '<span></span>';
-            }
-            background += '</div>';
-        }
-        background += '</div>';
-
-        var chessboard = '<div class="chessboard">';
-        for (i = 0; i < size; i++) {
-            chessboard += '<div>';
-            for (j = 0; j < size; j++) {
-                chessboard += '<span data-y="' + i + '" data-x="' + j + '"></span>';
-            }
-            chessboard += '</div>';
-        }
-        chessboard += '</div>';
-
-        var container = $('#container');
-        container.html(background).find('.background').width((size - 1) * blockSize + (size - 1) - 1);
-        container.append(chessboard);
-        var chessboardEl = container.find('.chessboard');
-        chessboardEl.width(size * blockSize + size);
-    };
-
-    Chessboard.prototype.initEvent = function () {
-        $('.chessboard').delegate('span', 'click', function () {
-            console.log($(this).data('x'), $(this).data('y'));
-            $(this).html('<i class="white"></i>');
-        });
-    };
-
-    var Computer = function (option) {
-        this.color = option.color;
-        this.session = option.session;
-        this.api = option.api;
-    };
-
-    /**
-     * Get my move, param is adversary's move
-     *
-     * @param {Array} adversary
-     */
-    Computer.prototype.move = function (adversary) {
-        var me = this;
-        $.ajax({
-            url: this.api,
-            data: {
-                move: adversary[0] + '-' + adversary[1],
-                session: this.session,
-                color: this.color
-            },
-            dataType: 'jsonp',
-            jsonpCallback: 'go',
-            success: function (move) {
-                me.callback.call(null, move);
-            }
-        });
-    };
-
-    /**
-     * Do callback when this player moved
-     *
-     * @param {Function} callback
-     */
-    Computer.prototype.onMoved = function (callback) {
-        this.callback = callback;
-    };
-
-    // main
-    var chessboard = new Chessboard();
-    chessboard.render();
-
-    var playerA = new Computer();
-    playerA.move([7, 7]);
-    playerA.onMoved(function (move) {
-        if (move[0] === -1 || move[1] === -1) {
-            console.log('Game over: Player A failed.');
-        } else {
-            playerB.move(move);
-        }
-    });
-
-    var playerB = new Computer();
-    playerB.onMoved(function (move) {
-        if (move[0] === -1 || move[1] === -1) {
-            console.log('Game over: Player B failed.');
-        } else {
-            playerA.move(move);
-        }
-    });
-</script>
+<script src="main.js"></script>
 </body>
 </html>
