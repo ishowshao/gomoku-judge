@@ -1,5 +1,8 @@
 /**
- * @param option
+ * 控制AI一方的工作
+ *
+ * @param {Object} option
+ * @class Computer
  * @constructor
  */
 var Computer = function (option) {
@@ -40,7 +43,10 @@ Computer.prototype.onMoved = function (callback) {
 };
 
 /**
- * @param option
+ * 人机对战中的人
+ *
+ * @param {Object} option
+ * @class Person
  * @constructor
  */
 var Person = function (option) {
@@ -74,6 +80,9 @@ Person.prototype.onMoved = function (callback) {
 };
 
 /**
+ * 棋盘界面
+ *
+ * @class Chessboard
  * @constructor
  */
 var Chessboard = function () {
@@ -152,6 +161,8 @@ Chessboard.prototype.go = function (position, color) {
 };
 
 /**
+ * 游戏类，全局控制
+ *
  * @class Game
  * @constructor
  */
