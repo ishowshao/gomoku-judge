@@ -60,6 +60,7 @@ Person.prototype.move = function (adversary) {
     $('.chessboard').one('click', 'span', function () {
         console.log($(this).data('x'), $(this).data('y'));
         $(this).html('<i class="' + me.color + '"></i>');
+        me.callback.call(null, [Number($(this).data('x')), Number($(this).data('y'))]);
     });
 };
 
@@ -200,6 +201,7 @@ Game.prototype.initEvent = function () {
     });
 
     $('#start').click(function () {
+        $(this).prop('disabled', true);
         me.start();
     });
 };
@@ -266,16 +268,17 @@ Game.prototype.start = function () {
             }
         });
     } else {
+        console.log('人', me.person);
         var person = new Person({
             name: namePerson,
             color: me.person
         });
         person.onMoved(function (move) {
-            me.chessboard.go(move);
+            me.chessboard.go(move, me.person);
             if (move[0] === -1 || move[1] === -1) {
                 console.log('Game over: Person failed.');
             } else {
-                playerB.move(move);
+                ai.move(move);
             }
         });
         var ai = new Computer({
@@ -285,13 +288,18 @@ Game.prototype.start = function () {
             api: apiAi
         });
         ai.onMoved(function (move) {
-            me.chessboard.go(move);
+            me.chessboard.go(move, ai.color);
             if (move[0] === -1 || move[1] === -1) {
                 console.log('Game over: AI failed.');
             } else {
-                playerB.move(move);
+                person.move(move);
             }
         });
+        if (person.color === 'black') {
+            person.move();
+        } else {
+            ai.move('start');
+        }
     }
 };
 
