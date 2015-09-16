@@ -243,7 +243,7 @@ Game.prototype.start = function () {
         });
         playerA.move('start');
         playerA.onMoved(function (move) {
-            me.chessboard.go(move);
+            me.chessboard.go(move, 'black');
             if (move[0] === -1 || move[1] === -1) {
                 console.log('Game over: Player A failed.');
             } else {
@@ -258,6 +258,7 @@ Game.prototype.start = function () {
             api: apiB
         });
         playerB.onMoved(function (move) {
+            me.chessboard.go(move, 'white');
             if (move[0] === -1 || move[1] === -1) {
                 console.log('Game over: Player B failed.');
             } else {
